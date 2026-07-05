@@ -11,6 +11,19 @@ logger = logging.getLogger(__file__)
 
 
 def get_product_list(page, campaign_id, access_token):
+    """Возвращает список товаров магазина YandexMarket
+
+    Args:
+        page (str): номер страницы с товарами
+        campaign_id (str): идентификатор компании в YandexMarket
+        access_token (str): токен (Api-Key) продавца YandexMarket для авторизации
+
+    Returns:
+        dict: словарь со списком товаров и данными о товарах
+
+    Raises:
+        HTTPError: запрос к API завершился ошибкой с кодом, отличным от 2хх
+    """
     endpoint_url = "https://api.partner.market.yandex.ru/"
     headers = {
         "Content-Type": "application/json",
@@ -30,6 +43,19 @@ def get_product_list(page, campaign_id, access_token):
 
 
 def update_stocks(stocks, campaign_id, access_token):
+    """Обновить остатки товаров на сайте
+
+    Args:
+        stocks (list): список с данными об остатках товаров
+        campaign_id (str): идентификатор компании в YandexMarket
+        access_token (str): токен (Api-Key) продавца YandexMarket для авторизации
+
+    Returns:
+        dict: ответ от API с результатами обновлени
+
+    Raises:
+        HTTPError: запрос к API завершился ошибкой с кодом, отличным от 2хх
+    """
     endpoint_url = "https://api.partner.market.yandex.ru/"
     headers = {
         "Content-Type": "application/json",
@@ -46,6 +72,19 @@ def update_stocks(stocks, campaign_id, access_token):
 
 
 def update_price(prices, campaign_id, access_token):
+    """Обновить цены товаров на сайте
+
+    Args:
+        prices (list): список с данными для обновления цен
+        campaign_id (str): идентификатор компании в YandexMarket
+        access_token (str): токен (Api-Key) продавца YandexMarket для авторизации
+
+    Returns:
+        dict: ответ от API с результатами обновления
+
+    Raises:
+        HTTPError: запрос к API завершился ошибкой с кодом, отличным от 2хх
+    """
     endpoint_url = "https://api.partner.market.yandex.ru/"
     headers = {
         "Content-Type": "application/json",
@@ -62,7 +101,18 @@ def update_price(prices, campaign_id, access_token):
 
 
 def get_offer_ids(campaign_id, market_token):
-    """Получить артикулы товаров Яндекс маркета"""
+    """Получить уникальный внутренний код продавца (sku) на товары YandexMarket
+
+    Args:
+        campaign_id (str): идентификатор компании в YandexMarket
+        market_token (str): токен (Api-Key) продавца YandexMarket для авторизации
+
+    Returns:
+        list: список sku на товары на сайте
+
+    Raises:
+        HTTPError: запрос к API завершился ошибкой с кодом, отличным от 2хх
+    """
     page = ""
     product_list = []
     while True:
@@ -78,6 +128,17 @@ def get_offer_ids(campaign_id, market_token):
 
 
 def create_stocks(watch_remnants, offer_ids, warehouse_id):
+    """Актуализировать остатки товаров
+
+    Args:
+        offer_ids (list): список sku на товары на сайте
+        watch_remnants (dict): список из ексель файла с остатками часов и информацией о них
+        warehouse_id (str): идентификатор склада в YandexMarket
+
+    Returns:
+        list: список с актуализированными данными об остатках
+
+    """
     # Уберем то, что не загружено в market
     stocks = list()
     date = str(datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z")
@@ -123,6 +184,16 @@ def create_stocks(watch_remnants, offer_ids, warehouse_id):
 
 
 def create_prices(watch_remnants, offer_ids):
+    """Создать цены на товары
+
+    Args:
+        offer_ids (list): список sku на товары на сайте
+        watch_remnants (dict): список из ексель файла с остатками часов и информацией о них
+
+    Returns:
+        list: список с ценами на товары
+
+    """
     prices = []
     for watch in watch_remnants:
         if str(watch.get("Код")) in offer_ids:
@@ -143,6 +214,19 @@ def create_prices(watch_remnants, offer_ids):
 
 
 async def upload_prices(watch_remnants, campaign_id, market_token):
+    """Загрузка цен товаров на сайт
+
+    Args:
+        campaign_id (str): идентификатор компании в YandexMarket
+        market_token (str): токен (Api-Key) продавца YandexMarket для авторизации
+        watch_remnants (dict): список из ексель файла с остатками часов и информацией о них
+
+    Returns:
+        dict: список с ценами на товары
+
+    Raises:
+        HTTPError: запрос к API завершился ошибкой с кодом, отличным от 2хх
+    """
     offer_ids = get_offer_ids(campaign_id, market_token)
     prices = create_prices(watch_remnants, offer_ids)
     for some_prices in list(divide(prices, 500)):
@@ -151,6 +235,20 @@ async def upload_prices(watch_remnants, campaign_id, market_token):
 
 
 async def upload_stocks(watch_remnants, campaign_id, market_token, warehouse_id):
+    """Загрузка остатков товаров на сайт
+
+    Args:
+        campaign_id (str): идентификатор компании в YandexMarket
+        market_token (str): токен (Api-Key) продавца YandexMarket для авторизации
+        watch_remnants (dict): список из ексель файла с остатками часов и информацией о них
+        warehouse_id (str): идентификатор модели работы продавца с маркетплейсом (FBS/DBS)
+
+    Returns:
+        tuple: кортеж из списка с ненулевым остатком и список с актуальными данными об остатках
+
+    Raises:
+        HTTPError: запрос к API завершился ошибкой с кодом, отличным от 2хх
+    """
     offer_ids = get_offer_ids(campaign_id, market_token)
     stocks = create_stocks(watch_remnants, offer_ids, warehouse_id)
     for some_stock in list(divide(stocks, 2000)):
@@ -168,7 +266,6 @@ def main():
     campaign_dbs_id = env.str("DBS_ID")
     warehouse_fbs_id = env.str("WAREHOUSE_FBS_ID")
     warehouse_dbs_id = env.str("WAREHOUSE_DBS_ID")
-
     watch_remnants = download_stock()
     try:
         # FBS
@@ -179,7 +276,6 @@ def main():
             update_stocks(some_stock, campaign_fbs_id, market_token)
         # Поменять цены FBS
         upload_prices(watch_remnants, campaign_fbs_id, market_token)
-
         # DBS
         offer_ids = get_offer_ids(campaign_dbs_id, market_token)
         # Обновить остатки DBS
